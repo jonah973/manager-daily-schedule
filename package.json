@@ -1,0 +1,9 @@
+{
+  "name": "due-today-by-operation-password",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Password-protected Due Today by Operation Fulcrum report",
+  "scripts": { "start": "node server.js", "dev": "node server.js" },
+  "engines": { "node": ">=20" },
+  "dependencies": { "dotenv": "^16.4.7" }
+}

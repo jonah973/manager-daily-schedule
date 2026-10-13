@@ -1,0 +1,579 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Due Today by Operation</title>
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+.f-heading-1 { font: var(--tui-font-heading-1); }
+.f-heading-2 { font: var(--tui-font-heading-2); }
+.f-heading-4 { font: var(--tui-font-heading-4); }
+.f-text-m { font: var(--tui-font-text-m); }
+.f-text-ui-m { font: var(--tui-font-text-ui-m); }
+.f-text-ui-s { font: var(--tui-font-text-ui-s); }
+summary::-webkit-details-marker { display: none; }
+details[open] .chev { transform: rotate(90deg); }
+.stack { margin-top: var(--space-24); }
+.back-sheet { position: absolute; inset: 0; z-index: 0; pointer-events: none; background: #0D1720; border: thin solid color-mix(in srgb, #71818D 30%, #0D1720); border-radius: var(--tui-radius-s); box-shadow: var(--tui-shadow-small); }
+.back-sheet.d1 { transform: translate(var(--space-4), var(--space-4)); background: color-mix(in srgb, #71818D 8%, #0D1720); }
+.back-sheet.d2 { transform: translate(calc(var(--space-4) * 2), calc(var(--space-4) * 2)); background: color-mix(in srgb, #71818D 14%, #0D1720); }
+.back-sheet.d3 { transform: translate(calc(var(--space-4) * 3), calc(var(--space-4) * 3)); background: color-mix(in srgb, #71818D 20%, #0D1720); }
+.sheet { z-index: 2; background: #0D1720; color: #E8E0CF; border: thin solid color-mix(in srgb, #71818D 30%, #0D1720); box-shadow: var(--tui-shadow-small); }
+#viewTitle { color: #E8E0CF; }
+#opTabs > span { color: #71818D; }
+.sheet > #content > div:not(.card) { color: #71818D; }
+.sheet .card { box-shadow: none; border: thin solid var(--tui-border-normal); }
+.sheet details.card { border-color: #394653; }
+.sheet-tab { position: absolute; bottom: 100%; left: var(--space-24); margin-bottom: calc(-1 * var(--space-2)); padding: var(--space-4) var(--space-16) calc(var(--space-4) + var(--space-2)); background: #0D1720; border: thin solid color-mix(in srgb, #71818D 30%, #0D1720); border-bottom: none; border-radius: var(--tui-radius-s) var(--tui-radius-s) 0 0; color: #71818D; letter-spacing: 0.02em; white-space: nowrap; }
+.sheet-tab:empty { display: none; }
+@keyframes bringForward { from { transform: translate(var(--space-8), var(--space-8)); opacity: 0.6; } to { transform: none; opacity: 1; } }
+.sheet.bring-forward { animation: bringForward 0.28s ease-out; }
+.wc-rail-label { padding-left: var(--space-12); letter-spacing: 0.04em; text-transform: uppercase; }
+.wc-rail { background: #0D1720; border-radius: var(--tui-radius-s); }
+.wc-tab { position: relative; display: flex; justify-content: space-between; align-items: center; gap: var(--space-8); width: 100%; text-align: left; padding: var(--space-12); border: thin solid color-mix(in srgb, #71818D 30%, #0D1720); border-radius: var(--tui-radius-s); background: color-mix(in srgb, #71818D 8%, #0D1720); color: #249E9C; font: var(--tui-font-text-ui-m); transition: transform 0.18s ease, background-color 0.18s ease, color 0.18s ease; }
+.wc-tab { font-weight: 700; }
+.wc-tab:hover { background: color-mix(in srgb, #71818D 18%, #0D1720); color: #249E9C; }
+.wc-tab.is-active { background: #F0B94D; border-color: #F0B94D; color: #0D1720; font-weight: 700; }
+.wc-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wc-count { flex-shrink: 0; color: #249E9C; font-weight: 700; }
+.wc-label, .wc-count { font-size: calc(100% + 2pt); }
+.wc-tab.is-active .wc-count { color: #0D1720; }
+@media (min-width: 768px) {
+  .wc-rail { border-radius: var(--tui-radius-s) 0 0 var(--tui-radius-s); }
+  .wc-tab { border-right-width: 0; border-radius: var(--tui-radius-s) 0 0 var(--tui-radius-s); transform: translateX(calc(-1 * var(--space-4) * var(--depth, 1))); }
+  .wc-tab:hover:not(.is-active) { transform: translateX(calc(-1 * var(--space-4) * var(--depth, 1) + var(--space-2))); }
+  .wc-tab.is-active { z-index: 2; transform: none; padding-right: calc(var(--space-12) + var(--space-2)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sheet.bring-forward { animation: none; }
+  .wc-tab { transition: none; }
+}
+@media print {
+  .no-print { display: none !important; }
+  body { background: white !important; }
+  .card { box-shadow: none !important; }
+  details > *:not(summary) { display: block !important; }
+  .past-due { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .stack { margin-top: 0 !important; }
+  .sheet { border: none !important; box-shadow: none !important; padding: 0 !important; animation: none !important; background: white !important; color: var(--tui-text-primary) !important; }
+  #viewTitle { color: var(--tui-text-primary) !important; }
+}
+</style>
+<style>:root{--tui-font-heading-1:700 2rem/1.2 system-ui,sans-serif;--tui-font-heading-2:700 1.5rem/1.25 system-ui,sans-serif;--tui-font-heading-4:600 1.125rem/1.3 system-ui,sans-serif;--tui-font-text-m:400 1rem/1.5 system-ui,sans-serif;--tui-font-text-ui-m:400 .9375rem/1.4 system-ui,sans-serif;--tui-font-text-ui-s:400 .8125rem/1.4 system-ui,sans-serif;--f-body-bg:#19252f;--tui-text-primary:#e8e0cf;--tui-text-secondary:#9aa7b0;--tui-text-primary-on-accent-1:#0d1720;--tui-background-base:#101b24;--tui-background-neutral-1:#202d37;--tui-border-normal:#394653;--tui-radius-s:8px;--tui-radius-xs:5px;--tui-shadow-small:0 2px 8px #0005;--space-2:2px;--space-4:4px;--space-8:8px;--space-12:12px;--space-16:16px;--space-24:24px;--success:#45a979;--danger:#e45c65;--warning:#e7ae43;--interaction:#249e9c;--interaction-focus:#1b8382;--in-progress:#54a2d0;--pending:#d49a32;--idle:#71818d}</style>
+</head>
+<body class="bg-[var(--f-body-bg)] text-[var(--tui-text-primary)] f-text-ui-m">
+<section id="passwordGate" style="position:fixed;inset:0;z-index:1000;background:#19252f;display:flex;align-items:center;justify-content:center;padding:24px"><form id="passwordForm" style="width:min(100%,420px);background:#101b24;color:#e8e0cf;padding:28px;border:1px solid #394653;border-radius:8px"><h1 style="font:700 1.4rem system-ui;margin:0 0 8px">Due Today by Operation</h1><p style="color:#9aa7b0">Enter the report password to continue.</p><label for="reportPassword">Password</label><input id="reportPassword" type="password" autocomplete="current-password" required style="box-sizing:border-box;width:100%;margin:8px 0;padding:12px;border-radius:6px;border:1px solid #64748b;background:#0d1720;color:#fff"><div id="passwordError" role="alert" style="color:#e45c65;min-height:1.3em"></div><button type="submit" style="width:100%;padding:12px;background:#249e9c;color:#0d1720;font-weight:700;border:0;border-radius:6px">Continue</button></form></section>
+<main class="mx-auto max-w-screen-xl px-[var(--space-24)] py-[var(--space-24)] flex flex-col gap-[var(--space-16)]">
+  <header class="flex flex-wrap items-center gap-[var(--space-12)]">
+    <div class="flex-1">
+      <h1 class="f-heading-1">Due Today by Operation</h1>
+      <div class="f-text-ui-s text-[var(--tui-text-secondary)]">Prototype · Ready operations on sales-order jobs (open sales orders only) with a production due date on or before the selected day (past-due rows in red), grouped by customer PO, with a view for each work center and each operation in it</div>
+    </div>
+    <div class="no-print flex flex-wrap items-end gap-[var(--space-8)]">
+      <label class="flex flex-col gap-[var(--space-4)]">
+        <span class="f-text-ui-s text-[var(--tui-text-secondary)]">Due Date</span>
+        <input id="dueDate" type="date" class="px-[var(--space-8)] py-[var(--space-4)] rounded-[var(--tui-radius-s)] border border-[var(--tui-border-normal)] bg-[var(--tui-background-base)] f-text-ui-m">
+      </label>
+      <button id="todayBtn" class="px-[var(--space-12)] py-[var(--space-4)] rounded-[var(--tui-radius-s)] f-text-ui-m border border-[var(--tui-border-normal)] hover:bg-[var(--tui-background-neutral-1)]">Today</button>
+      <button id="refreshBtn" class="px-[var(--space-12)] py-[var(--space-4)] rounded-[var(--tui-radius-s)] f-text-ui-m border border-[var(--tui-border-normal)] hover:bg-[var(--tui-background-neutral-1)]">Refresh</button>
+      <button id="printBtn" class="px-[var(--space-12)] py-[var(--space-4)] rounded-[var(--tui-radius-s)] f-text-ui-m text-[var(--tui-text-primary-on-accent-1)] bg-[var(--interaction)] hover:bg-[var(--interaction-focus)]">Print / Save as PDF</button>
+    </div>
+  </header>
+
+  <div class="flex flex-col md:flex-row md:items-stretch gap-[var(--space-16)] md:gap-0">
+    <aside id="wcPanel" hidden class="no-print relative z-[3] w-full md:w-60 md:shrink-0 md:mr-[calc(-1*var(--space-2))]">
+      <div class="md:sticky md:top-0 md:h-screen md:flex md:items-center">
+        <div class="wc-rail w-full md:max-h-[90vh] overflow-y-auto py-[var(--space-8)] px-[var(--space-8)] md:px-0">
+          <div class="wc-rail-label f-text-ui-s text-[#249E9C] mb-[var(--space-8)]">Work center</div>
+          <nav id="wcTabs" class="flex flex-col gap-[var(--space-4)] md:pl-[var(--space-12)]" aria-label="Work center views"></nav>
+        </div>
+      </div>
+    </aside>
+
+    <div id="stack" class="stack relative flex-1 min-w-0 w-full">
+    <div class="back-sheet d3 no-print" aria-hidden="true"></div>
+    <div class="back-sheet d2 no-print" aria-hidden="true"></div>
+    <div class="back-sheet d1 no-print" aria-hidden="true"></div>
+    <div id="sheet" class="sheet relative flex flex-col gap-[var(--space-16)] rounded-[var(--tui-radius-s)] p-[var(--space-24)]">
+      <div id="sheetTab" class="sheet-tab no-print f-text-ui-s" aria-hidden="true"></div>
+      <nav id="opTabs" class="no-print flex flex-wrap items-center justify-center gap-[var(--space-8)]" aria-label="Operation views"></nav>
+
+      <h2 id="viewTitle" class="f-heading-2"></h2>
+
+      <section id="kpis" class="grid grid-cols-2 lg:grid-cols-5 gap-[var(--space-12)]"></section>
+
+      <section id="content" class="flex flex-col gap-[var(--space-12)]">
+        <div class="p-[var(--space-24)] f-text-m text-[var(--tui-text-secondary)]">Loading…</div>
+      </section>
+    </div>
+    </div>
+  </div>
+</main>
+
+<script>
+(function () {
+  const PATH_ACTIVITY = '/api/reporting/job-activity/list';
+  const PATH_JOBS = '/api/jobs/list';
+  const PATH_SO = '/api/sales-orders/list';
+  const PATH_WC = '/api/work-centers/list';
+  const PATH_SO_LINES = '/api/reporting/sales-order-lines/list';
+  const NO_WC = '(No work center)';
+  let shopTimeZone='';
+  async function apiList(path,body){const response=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(body||{})});let data=null;try{data=await response.json();}catch(_){}if(!response.ok){const err=new Error(data&&(data.error||data.message)||'Request failed with HTTP '+response.status);err.status=response.status;err.detail=data&&(typeof data.detail==='string'?data.detail:JSON.stringify(data.detail));err.body=data;err.retryable=response.status>=500||response.status===429;throw err;}if(!Array.isArray(data))throw new Error('Fulcrum returned an unexpected list response.');return data;}
+
+  const state = { rows: [], jobsByName: new Map(), eqToWc: new Map(), soValue: new Map(), soValueOk: false, loading: false, day: '', ops: new Set(), wc: '' };
+
+  const content = document.getElementById('content');
+  const kpis = document.getElementById('kpis');
+  const dueInput = document.getElementById('dueDate');
+  const opTabs = document.getElementById('opTabs');
+  const wcTabs = document.getElementById('wcTabs');
+  const wcPanel = document.getElementById('wcPanel');
+  const viewTitle = document.getElementById('viewTitle');
+  const sheet = document.getElementById('sheet');
+  const sheetTab = document.getElementById('sheetTab');
+  let shownWc = null;
+
+  function shopToday() {
+    const tz = shopTimeZone || undefined;
+    try {
+      const parts = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+      const get = (t) => parts.find(p => p.type === t).value;
+      return get('year') + '-' + get('month') + '-' + get('day');
+    } catch (e) {
+      return new Date().toISOString().slice(0, 10);
+    }
+  }
+
+  function fmtDay(value) {
+    if (!value) return '—';
+    const d = String(value).slice(0, 10);
+    try { return new Date(d + 'T00:00:00').toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}); } catch (e) { return d; }
+  }
+
+  function fmtCreated(iso) {
+    if (!iso) return '—';
+    try {
+      return new Date(iso).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
+    } catch (e) {
+      return String(iso).slice(0, 10);
+    }
+  }
+
+  function el(tag, cls, text) {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined && text !== null) n.textContent = text;
+    return n;
+  }
+
+  function statusColor(s) {
+    switch ((s || '').toLowerCase()) {
+      case 'complete': return '--success';
+      case 'running': return '--in-progress';
+      case 'paused': return '--warning';
+      case 'ready': return '--interaction';
+      case 'pending': return '--pending';
+      default: return '--idle';
+    }
+  }
+
+  function badge(text) {
+    const b = el('span', 'inline-flex items-center px-[var(--space-8)] py-[var(--space-2)] rounded-[var(--tui-radius-xs)] f-text-ui-s whitespace-nowrap', text || 'Unknown');
+    const c = statusColor(text);
+    b.style.color = 'var(' + c + ')';
+    b.style.background = 'color-mix(in srgb, var(' + c + ') 8%, transparent)';
+    return b;
+  }
+
+  function isComplete(r) {
+    return (r.operationStatus || '').toLowerCase() === 'complete';
+  }
+
+  function wcOf(r) {
+    const eq = String(r.scheduledEquipment || '').trim();
+    if (!eq) return NO_WC;
+    return state.eqToWc.get(eq) || NO_WC;
+  }
+
+  function isPastDue(r) {
+    if (!r.productionDueDate) return false;
+    return String(r.productionDueDate).slice(0, 10) < shopToday();
+  }
+
+  function showError(err) {
+    content.innerHTML = '';
+    const box = el('div', 'p-[var(--space-16)] rounded-[var(--tui-radius-s)] f-text-m');
+    box.style.color = 'var(--danger)';
+    box.style.background = 'color-mix(in srgb, var(--danger) 8%, transparent)';
+    box.appendChild(el('p', '', (err && err.userMessage) || 'Could not load today\'s operations.'));
+    const parts = [];
+    if (err && (err.detail || err.message)) parts.push(err.detail || err.message);
+    if (err && err.status) parts.push('HTTP ' + err.status);
+    if (err && err.body) {
+      let t = '';
+      try { t = typeof err.body === 'string' ? err.body : JSON.stringify(err.body); } catch (_) { t = ''; }
+      if (t) parts.push(t.slice(0, 300));
+    }
+    if (parts.length) {
+      const d = el('details', 'mt-[var(--space-8)] f-text-ui-s text-[var(--tui-text-secondary)]');
+      d.appendChild(el('summary', '', 'Details for support'));
+      d.appendChild(el('p', '', parts.join(' — ')));
+      box.appendChild(d);
+    }
+    if (err && err.retryable) {
+      const btn = el('button', 'mt-[var(--space-8)] px-[var(--space-12)] py-[var(--space-4)] rounded-[var(--tui-radius-s)] border border-[var(--tui-border-normal)] f-text-ui-m', 'Retry');
+      btn.addEventListener('click', load);
+      box.appendChild(btn);
+    }
+    content.appendChild(box);
+    kpis.innerHTML = '';
+    opTabs.innerHTML = '';
+    wcTabs.innerHTML = '';
+    wcPanel.hidden = true;
+    viewTitle.textContent = '';
+  }
+
+  async function load() {
+    if (state.loading) return;
+    state.loading = true;
+    const day = dueInput.value || shopToday();
+    state.day = day;
+    content.innerHTML = '';
+    content.appendChild(el('div', 'p-[var(--space-24)] f-text-m text-[var(--tui-text-secondary)]', 'Loading operations due on or before ' + fmtDay(day) + '…'));
+    try {
+      const filter = { productionDueDateTo: day, statuses: ['draft', 'needsReview', 'approved', 'engineering', 'scheduled', 'inProgress', 'hold'] };
+      const results = await Promise.all([
+        apiList(PATH_ACTIVITY, { operationStatus: 'Ready', productionDueDateTo: day }),
+        apiList(PATH_JOBS, filter),
+        apiList(PATH_WC, {}).catch(() => [])
+      ]);
+      const activity = results[0];
+      const jobs = results[1];
+      const wcs = results[2] || [];
+      const eqMap = new Map();
+      wcs.slice().sort((a, b) => (b.deleted ? 1 : 0) - (a.deleted ? 1 : 0)).forEach(w => {
+        if (!w || !w.name) return;
+        (w.equipment || []).forEach(e => {
+          if (e && e.name) eqMap.set(String(e.name).trim(), w.name);
+        });
+      });
+      state.eqToWc = eqMap;
+      const map = new Map();
+      jobs.forEach(j => { if (j && j.name && !map.has(j.name)) map.set(j.name, j); });
+      state.jobsByName = map;
+      const candidates = activity.filter(r => {
+        const s = (r.jobStatus || '').toLowerCase();
+        return s !== 'cancelled' && String(r.salesOrderNumber || '').trim() !== '';
+      });
+      const soNums = Array.from(new Set(candidates.map(r => Number(String(r.salesOrderNumber).trim())).filter(n => Number.isFinite(n))));
+      const openSo = new Set();
+      const soValue = new Map();
+      const seenLines = new Set();
+      let soValueOk = true;
+      for (let i = 0; i < soNums.length; i += 100) {
+        const chunk = soNums.slice(i, i + 100);
+        const pair = await Promise.all([
+          apiList(PATH_SO, { numbers: chunk }),
+          apiList(PATH_SO_LINES, { salesOrderNumbers: chunk }).catch(() => null)
+        ]);
+        const orders = pair[0];
+        const lines = pair[1];
+        orders.forEach(o => {
+          if (o && !o.deleted && o.status !== 'complete') openSo.add(String(o.number));
+        });
+        if (lines === null) {
+          soValueOk = false;
+        } else {
+          lines.forEach(l => {
+            if (!l || String(l.lineItemType || '').toLowerCase() !== 'part' || l.salesOrderNumber == null) return;
+            if (/^ROUTEINS/i.test(String(l.lineItem || '').trim()) || /route package protection/i.test(String(l.lineItemDescription || ''))) return;
+            const lineKey = l.salesOrderLineItemId || ('pk:' + l.salesOrderLinePrimaryKey);
+            if (seenLines.has(lineKey)) return;
+            seenLines.add(lineKey);
+            const so = String(l.salesOrderNumber);
+            soValue.set(so, (soValue.get(so) || 0) + (Number(l.lineItemSubTotal) || 0));
+          });
+        }
+      }
+      state.soValue = soValue;
+      state.soValueOk = soValueOk;
+      state.rows = candidates.filter(r => openSo.has(String(r.salesOrderNumber).trim()));
+      buildOpOptions();
+      render();
+    } catch (err) {
+      showError(err);
+    } finally {
+      state.loading = false;
+    }
+  }
+
+  function buildOpOptions() {
+    const wcNames = new Set(state.rows.map(wcOf));
+    if (state.wc && !wcNames.has(state.wc)) state.wc = '';
+    const names = new Set(state.rows.map(r => r.operationName || '(Unnamed operation)'));
+    Array.from(state.ops).forEach(n => { if (!names.has(n)) state.ops.delete(n); });
+  }
+
+  function sortNames(a, b) {
+    if (a === NO_WC) return 1;
+    if (b === NO_WC) return -1;
+    return a.localeCompare(b);
+  }
+
+  function buildTabs() {
+    wcTabs.innerHTML = '';
+    opTabs.innerHTML = '';
+    wcPanel.hidden = !state.rows.length;
+    if (!state.rows.length) return;
+    const wcCounts = new Map();
+    state.rows.forEach(r => {
+      const w = wcOf(r);
+      wcCounts.set(w, (wcCounts.get(w) || 0) + 1);
+    });
+    const wcNames = Array.from(wcCounts.keys()).sort(sortNames);
+    const wcRows = state.wc ? state.rows.filter(r => wcOf(r) === state.wc) : state.rows;
+    const counts = new Map();
+    wcRows.forEach(r => {
+      const n = r.operationName || '(Unnamed operation)';
+      counts.set(n, (counts.get(n) || 0) + 1);
+    });
+    Array.from(state.ops).forEach(n => { if (!counts.has(n)) state.ops.delete(n); });
+    const names = Array.from(counts.keys()).sort((a, b) => a.localeCompare(b));
+    const wcOrder = [''].concat(wcNames);
+    const activeWcIdx = Math.max(0, wcOrder.indexOf(state.wc));
+    const mk = (value, label, count, current, onPick, vertical) => {
+      const active = typeof current === 'function' ? current(value) : current === value;
+      const b = el('button', vertical
+        ? 'wc-tab' + (active ? ' is-active' : '')
+        : 'px-[var(--space-12)] py-[var(--space-4)] rounded-[var(--tui-radius-s)] f-text-ui-m border ' + (active
+          ? 'border-[var(--interaction)] bg-[var(--interaction)] text-[var(--tui-text-primary-on-accent-1)]'
+          : 'border-[#E8E0CF] bg-[#E8E0CF] text-[#000000] hover:border-[#AEBBC5]'));
+      b.type = 'button';
+      b.setAttribute('aria-pressed', active ? 'true' : 'false');
+      if (vertical) {
+        const idx = wcOrder.indexOf(value);
+        b.style.setProperty('--depth', String(Math.min(3, Math.max(1, Math.abs(idx - activeWcIdx)))));
+        b.title = label;
+        b.appendChild(el('span', 'wc-label', label));
+        b.appendChild(el('span', 'wc-count', '(' + count + ')'));
+      } else {
+        b.appendChild(document.createTextNode(label + ' '));
+        b.appendChild(el('span', '', '(' + count + ')'));
+      }
+      b.addEventListener('click', () => { onPick(value); render(); });
+      return b;
+    };
+    const pickWc = (v) => { state.wc = v; state.ops = new Set(); };
+    const pickOp = (v) => {
+      if (v === '') { state.ops = new Set(); return; }
+      if (state.wc) { state.ops = new Set([v]); return; }
+      if (state.ops.has(v)) state.ops.delete(v); else state.ops.add(v);
+    };
+    const opActive = (v) => v === '' ? state.ops.size === 0 : state.ops.has(v);
+    wcTabs.appendChild(mk('', 'All work centers', state.rows.length, state.wc, pickWc, true));
+    wcNames.forEach(n => wcTabs.appendChild(mk(n, n, wcCounts.get(n), state.wc, pickWc, true)));
+    const opLabel = el('span', 'f-text-ui-s text-[var(--tui-text-secondary)] w-24', state.wc ? 'Operation' : 'Operations');
+    if (!state.wc) opLabel.title = 'Click several operations to combine them; click one again to remove it';
+    opTabs.appendChild(opLabel);
+    opTabs.appendChild(mk('', 'All operations', wcRows.length, opActive, pickOp));
+    names.forEach(n => opTabs.appendChild(mk(n, n, counts.get(n), opActive, pickOp)));
+  }
+
+  function kpi(label, value) {
+    const a = el('article', 'card bg-[#D49A32] text-[#0D1720] text-center rounded-[var(--tui-radius-s)] shadow-[var(--tui-shadow-small)] p-[var(--space-12)]');
+    const labelEl = el('div', 'f-text-ui-s', label);
+    labelEl.style.fontWeight = '700';
+    a.appendChild(labelEl);
+    const valueEl = el('div', 'f-heading-2 mt-[var(--space-4)]', String(value));
+    valueEl.style.fontWeight = '700';
+    a.appendChild(valueEl);
+    return a;
+  }
+
+  function render() {
+    buildTabs();
+    const ops = state.ops;
+    const wc = state.wc;
+    const opText = ops.size ? Array.from(ops).sort((a, b) => a.localeCompare(b)).join(', ') : 'All operations';
+    viewTitle.textContent = (wc || 'All work centers') + ' · ' + opText + ' · due on or before ' + fmtDay(state.day);
+    sheetTab.textContent = wc || 'All work centers';
+    if (shownWc !== null && shownWc !== wc) {
+      sheet.classList.remove('bring-forward');
+      void sheet.offsetWidth;
+      sheet.classList.add('bring-forward');
+    }
+    shownWc = wc;
+    let rows = state.rows;
+    if (wc) rows = rows.filter(r => wcOf(r) === wc);
+    if (ops.size) rows = rows.filter(r => ops.has(r.operationName || '(Unnamed operation)'));
+
+    const groups = new Map();
+    rows.forEach(r => {
+      const key = (r.customerPurchaseOrder || '').trim() || '(No customer PO)';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(r);
+    });
+
+    kpis.innerHTML = '';
+    kpis.appendChild(kpi('Customer POs', groups.size));
+    kpis.appendChild(kpi('Sales Orders', new Set(rows.map(r => r.salesOrderNumber)).size));
+    kpis.appendChild(kpi('Jobs', new Set(rows.map(r => r.jobName)).size));
+    kpis.appendChild(kpi('Ready Operations', rows.length));
+    const pastDueCount = rows.filter(isPastDue).length;
+    const pdCard = kpi('Past Due Operations', pastDueCount);
+    if (pastDueCount > 0) {
+      pdCard.classList.add('past-due');
+      pdCard.style.color = 'var(--danger)';
+    }
+    kpis.appendChild(pdCard);
+
+    content.innerHTML = '';
+    if (!rows.length) {
+      const msg = state.rows.length
+        ? 'No operations match these filters for ' + fmtDay(state.day) + '.'
+        : 'No Ready operations on open sales-order jobs due on or before ' + fmtDay(state.day) + '.';
+      content.appendChild(el('div', 'card bg-[var(--tui-background-base)] rounded-[var(--tui-radius-s)] shadow-[var(--tui-shadow-small)] p-[var(--space-24)] f-text-m text-[var(--tui-text-secondary)] text-center', msg));
+      return;
+    }
+
+    const dueKey = (r) => r.productionDueDate ? String(r.productionDueDate).slice(0, 10) : '9999-12-31';
+    const minDueOf = (k) => groups.get(k).map(dueKey).sort()[0];
+    const keys = Array.from(groups.keys()).sort((a, b) => {
+      if (a === '(No customer PO)') return 1;
+      if (b === '(No customer PO)') return -1;
+      const da = minDueOf(a);
+      const db = minDueOf(b);
+      if (da !== db) return da < db ? -1 : 1;
+      return a.localeCompare(b, undefined, { numeric: true });
+    });
+
+    keys.forEach(key => {
+      const list = groups.get(key).slice().sort((a, b) => {
+        const da = dueKey(a);
+        const db = dueKey(b);
+        if (da !== db) return da < db ? -1 : 1;
+        const j = String(a.jobName || '').localeCompare(String(b.jobName || ''), undefined, { numeric: true });
+        if (j !== 0) return j;
+        return (a.operationNumber || 0) - (b.operationNumber || 0);
+      });
+      const first = list[0];
+      const det = el('details', 'card bg-[var(--tui-background-base)] rounded-[var(--tui-radius-s)] shadow-[var(--tui-shadow-small)] overflow-hidden');
+      det.open = false;
+      const sum = el('summary', 'flex flex-wrap items-center gap-[var(--space-12)] px-[var(--space-16)] py-[var(--space-12)] cursor-pointer list-none');
+      sum.appendChild(el('span', 'chev inline-block transition-transform text-[var(--tui-text-secondary)]', '›'));
+      sum.appendChild(el('span', 'f-heading-4', 'PO ' + key));
+      const meta = first.salesOrderNumber ? 'SO ' + first.salesOrderNumber : '';
+      if (meta) sum.appendChild(el('span', 'f-text-ui-s text-[var(--tui-text-secondary)]', meta));
+      if (state.soValueOk) {
+        const groupSos = Array.from(new Set(list.map(r => String(r.salesOrderNumber || '').trim()).filter(Boolean)));
+        const known = groupSos.filter(s => state.soValue.has(s));
+        if (known.length) {
+          const poValue = known.reduce((acc, s) => acc + state.soValue.get(s), 0);
+          let valueText;
+          try { valueText = new Intl.NumberFormat(undefined,{style:'currency',currency:'USD'}).format(poValue); } catch (e) { valueText = '$' + poValue.toFixed(2); }
+          const valueSpan = el('span', 'f-text-ui-m font-medium', valueText);
+          valueSpan.title = 'Sum of part line items on the sales order (excludes fees, tax, shipping and Route package protection)';
+          sum.appendChild(valueSpan);
+        }
+      }
+      let groupLate = false;
+      const dueDays = list.map(r => r.productionDueDate ? String(r.productionDueDate).slice(0, 10) : null).filter(Boolean).sort();
+      if (dueDays.length) {
+        const minDue = dueDays[0];
+        const maxDue = dueDays[dueDays.length - 1];
+        const dueText = 'Due ' + fmtDay(minDue) + (maxDue !== minDue ? ' – ' + fmtDay(maxDue) : '');
+        const dueSpan = el('span', 'f-text-ui-m font-medium', dueText);
+        if (minDue < shopToday()) {
+          groupLate = true;
+          sum.classList.add('past-due');
+          sum.style.background = '#A1050B';
+        }
+        sum.appendChild(dueSpan);
+      }
+      const open = list.filter(r => !isComplete(r)).length;
+      sum.appendChild(el('span', 'ml-auto f-text-ui-s text-[var(--tui-text-secondary)]', list.length + ' operation' + (list.length === 1 ? '' : 's') + ' · ' + open + ' open'));
+      if (groupLate) {
+        sum.style.color = 'rgb(0, 0, 0)';
+        Array.from(sum.children).forEach(c => {
+          c.style.color = 'rgb(0, 0, 0)';
+          c.style.fontWeight = '700';
+        });
+      }
+      det.appendChild(sum);
+
+      const wrap = el('div', 'overflow-x-auto');
+      const table = el('table', 'w-full border-collapse');
+      const thead = el('thead', 'bg-[var(--tui-background-neutral-1)] text-left');
+      const hr = el('tr', 'f-text-ui-s text-[var(--tui-text-secondary)]');
+      ['Op #', 'Operation', 'Job', 'Item', 'Qty', 'Created', 'Due', 'Status'].forEach((h, i) => {
+        hr.appendChild(el('th', 'px-[var(--space-12)] py-[var(--space-8)] font-medium' + (i === 4 ? ' text-right' : ''), h));
+      });
+      thead.appendChild(hr);
+      table.appendChild(thead);
+      const tbody = el('tbody', '');
+      list.forEach(r => {
+        const job = state.jobsByName.get(r.jobName);
+        const tr = el('tr', 'border-t border-[var(--tui-border-normal)] align-top');
+        const late = isPastDue(r);
+        if (job && job.id) {
+          tr.dataset.fulcrumNavigate = 'job:' + job.id;
+          tr.dataset.fulcrumNavigateTarget = 'new-tab';
+          tr.setAttribute('role', 'link');
+          tr.tabIndex = 0;
+          if (!late) tr.className += ' hover:bg-[var(--tui-background-neutral-1)]';
+        }
+        if (late) {
+          tr.classList.add('past-due');
+          tr.style.color = 'var(--danger)';
+          tr.style.background = 'color-mix(in srgb, var(--danger) 10%, transparent)';
+        }
+        tr.appendChild(el('td', 'px-[var(--space-12)] py-[var(--space-8)] text-[var(--tui-text-secondary)]', r.operationNumber != null ? String(r.operationNumber) : '—'));
+        const opTd = el('td', 'px-[var(--space-12)] py-[var(--space-8)]');
+        opTd.appendChild(el('div', '', r.operationName || '—'));
+        const opWc = wcOf(r);
+        const opSub = [r.scheduledEquipment, opWc !== NO_WC ? opWc : null].filter(Boolean).join(' · ');
+        if (opSub) opTd.appendChild(el('div', 'f-text-ui-s text-[var(--tui-text-secondary)]', opSub));
+        tr.appendChild(opTd);
+        tr.appendChild(el('td', 'px-[var(--space-12)] py-[var(--space-8)] whitespace-nowrap', r.jobName || '—'));
+        const itemTd = el('td', 'px-[var(--space-12)] py-[var(--space-8)]');
+        itemTd.appendChild(el('div', '', (r.item || '—') + (r.itemRevision ? ' Rev ' + r.itemRevision : '')));
+        if (r.itemDescription && r.itemDescription !== r.item) {
+          itemTd.appendChild(el('div', 'f-text-ui-s text-[var(--tui-text-secondary)] whitespace-pre-line', r.itemDescription));
+        }
+        tr.appendChild(itemTd);
+        const qty = r.jobPlannedQty != null ? Number(r.jobPlannedQty).toLocaleString() + (r.uoM ? ' ' + r.uoM : '') : '—';
+        tr.appendChild(el('td', 'px-[var(--space-12)] py-[var(--space-8)] text-right whitespace-nowrap', qty));
+        tr.appendChild(el('td', 'px-[var(--space-12)] py-[var(--space-8)] whitespace-nowrap', job ? fmtCreated(job.createdUtc) : '—'));
+        const dueTd = el('td', 'px-[var(--space-12)] py-[var(--space-8)] whitespace-nowrap' + (late ? ' font-semibold' : ''));
+        dueTd.appendChild(el('div', '', fmtDay(r.productionDueDate)));
+        if (late) dueTd.appendChild(el('div', 'f-text-ui-s', 'Past due'));
+        tr.appendChild(dueTd);
+        const st = el('td', 'px-[var(--space-12)] py-[var(--space-8)]');
+        st.appendChild(badge(r.operationStatus));
+        tr.appendChild(st);
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      wrap.appendChild(table);
+      det.appendChild(wrap);
+      content.appendChild(det);
+    });
+  }
+
+  function start() {
+    dueInput.value = shopToday();
+    dueInput.addEventListener('change', load);
+    document.getElementById('todayBtn').addEventListener('click', () => { dueInput.value = shopToday(); load(); });
+    document.getElementById('refreshBtn').addEventListener('click', load);
+    document.getElementById('printBtn').addEventListener('click', () => window.print());
+    load();
+  }
+
+  async function startStandalone(){const gate=document.getElementById('passwordGate'),form=document.getElementById('passwordForm'),errEl=document.getElementById('passwordError');document.body.style.overflow='hidden';async function startAuthed(){gate.hidden=true;document.body.style.overflow='';try{const c=await fetch('/api/config');if(c.ok)shopTimeZone=(await c.json()).timeZone||'';}catch(_){}start();}try{const s=await fetch('/api/session');if(s.ok&&(await s.json()).authenticated)await startAuthed();}catch(_){}form.addEventListener('submit',async e=>{e.preventDefault();errEl.textContent='';const b=form.querySelector('button');b.disabled=true;try{const r=await fetch('/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:document.getElementById('reportPassword').value})}),d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Password was not accepted.');await startAuthed();}catch(x){errEl.textContent=x.message;}finally{b.disabled=false;}});}
+  startStandalone();
+})();
+</script>
+</body>
+</html>

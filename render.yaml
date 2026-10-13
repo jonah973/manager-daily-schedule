@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: due-today-by-operation
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: FULCRUM_API_TOKEN
+        sync: false
+      - key: APP_PASSWORD
+        sync: false
+      - key: FULCRUM_BASE_URL
+        value: https://api.fulcrumpro.com
+      - key: FULCRUM_TIME_ZONE
+        value: America/Denver
