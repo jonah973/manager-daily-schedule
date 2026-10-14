@@ -425,11 +425,10 @@ details[open] .chev { transform: rotate(90deg); }
     kpis.appendChild(kpi('Customer POs', groups.size));
     kpis.appendChild(kpi('Sales Orders', new Set(rows.map(r => r.salesOrderNumber)).size));
     kpis.appendChild(kpi('Jobs', new Set(rows.map(r => r.jobName)).size));
-    const lateSalesOrders = new Set(rows.filter(isPastDue).map(r => String(r.salesOrderNumber || '').trim()).filter(Boolean));
-    kpis.appendChild(kpi('Late Sales Orders', lateSalesOrders.size));
-    const pastDueCount = rows.filter(isPastDue).length;
-    const pdCard = kpi('Past Due Operations', pastDueCount);
-    if (pastDueCount > 0) {
+    kpis.appendChild(kpi('Ready Operations', rows.length));
+    const pastDueSalesOrders = new Set(rows.filter(isPastDue).map(r => String(r.salesOrderNumber || '').trim()).filter(Boolean));
+    const pdCard = kpi('Sales Orders Past Due', pastDueSalesOrders.size);
+    if (pastDueSalesOrders.size > 0) {
       pdCard.classList.add('past-due');
       pdCard.style.color = 'var(--danger)';
     }
