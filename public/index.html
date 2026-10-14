@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Due Today by Operation</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
@@ -61,9 +62,13 @@ details[open] .chev { transform: rotate(90deg); }
 }
 </style>
 <style>:root{--tui-font-heading-1:700 2rem/1.2 system-ui,sans-serif;--tui-font-heading-2:700 1.5rem/1.25 system-ui,sans-serif;--tui-font-heading-4:600 1.125rem/1.3 system-ui,sans-serif;--tui-font-text-m:400 1rem/1.5 system-ui,sans-serif;--tui-font-text-ui-m:400 .9375rem/1.4 system-ui,sans-serif;--tui-font-text-ui-s:400 .8125rem/1.4 system-ui,sans-serif;--f-body-bg:#19252f;--tui-text-primary:#e8e0cf;--tui-text-secondary:#9aa7b0;--tui-text-primary-on-accent-1:#0d1720;--tui-background-base:#101b24;--tui-background-neutral-1:#202d37;--tui-border-normal:#394653;--tui-radius-s:8px;--tui-radius-xs:5px;--tui-shadow-small:0 2px 8px #0005;--space-2:2px;--space-4:4px;--space-8:8px;--space-12:12px;--space-16:16px;--space-24:24px;--success:#45a979;--danger:#e45c65;--warning:#e7ae43;--interaction:#249e9c;--interaction-focus:#1b8382;--in-progress:#54a2d0;--pending:#d49a32;--idle:#71818d}</style>
+<<<<<<< HEAD
 <style>
   #passwordGate:not([hidden]) { display: flex; }
 </style>
+=======
+<style>#passwordGate:not([hidden]){display:flex}</style>
+>>>>>>> d01f3b2 (Find photos attached directly to jobs)
 </head>
 <body class="bg-[var(--f-body-bg)] text-[var(--tui-text-primary)] f-text-ui-m">
 <section id="passwordGate" style="position:fixed;inset:0;z-index:1000;background:#19252f;align-items:center;justify-content:center;padding:24px"><form id="passwordForm" style="width:min(100%,420px);background:#101b24;color:#e8e0cf;padding:28px;border:1px solid #394653;border-radius:8px"><h1 style="font:700 1.4rem system-ui;margin:0 0 8px">Due Today by Operation</h1><p style="color:#9aa7b0">Enter the report password to continue.</p><label for="reportPassword">Password</label><input id="reportPassword" type="password" autocomplete="current-password" required style="box-sizing:border-box;width:100%;margin:8px 0;padding:12px;border-radius:6px;border:1px solid #64748b;background:#0d1720;color:#fff"><div id="passwordError" role="alert" style="color:#e45c65;min-height:1.3em"></div><button type="submit" style="width:100%;padding:12px;background:#249e9c;color:#0d1720;font-weight:700;border:0;border-radius:6px">Continue</button></form></section>
@@ -80,7 +85,9 @@ details[open] .chev { transform: rotate(90deg); }
       </label>
       <button id="todayBtn" class="px-[var(--space-12)] py-[var(--space-4)] rounded-[var(--tui-radius-s)] f-text-ui-m border border-[var(--tui-border-normal)] hover:bg-[var(--tui-background-neutral-1)]">Today</button>
       <button id="refreshBtn" class="px-[var(--space-12)] py-[var(--space-4)] rounded-[var(--tui-radius-s)] f-text-ui-m border border-[var(--tui-border-normal)] hover:bg-[var(--tui-background-neutral-1)]">Refresh</button>
+      <button id="exportBtn" class="px-[var(--space-12)] py-[var(--space-4)] rounded-[var(--tui-radius-s)] f-text-ui-m border border-[var(--tui-border-normal)] hover:bg-[var(--tui-background-neutral-1)]">Export to Excel</button>
       <button id="printBtn" class="px-[var(--space-12)] py-[var(--space-4)] rounded-[var(--tui-radius-s)] f-text-ui-m text-[var(--tui-text-primary-on-accent-1)] bg-[var(--interaction)] hover:bg-[var(--interaction-focus)]">Print / Save as PDF</button>
+      <div id="exportMsg" class="w-full f-text-ui-s p-[var(--space-8)] rounded-[var(--tui-radius-s)]" role="alert" hidden></div>
     </div>
   </header>
 
@@ -125,7 +132,8 @@ details[open] .chev { transform: rotate(90deg); }
   let shopTimeZone='';
   async function apiList(path,body){const response=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(body||{})});let data=null;try{data=await response.json();}catch(_){}if(!response.ok){const err=new Error(data&&(data.error||data.message)||'Request failed with HTTP '+response.status);err.status=response.status;err.detail=data&&(typeof data.detail==='string'?data.detail:JSON.stringify(data.detail));err.body=data;err.retryable=response.status>=500||response.status===429;throw err;}if(!Array.isArray(data))throw new Error('Fulcrum returned an unexpected list response.');return data;}
 
-  const state = { rows: [], jobsByName: new Map(), eqToWc: new Map(), soValue: new Map(), soValueOk: false, loading: false, day: '', ops: new Set(), wc: '' };
+  const state = { rows: [], jobsByName: new Map(), eqToWc: new Map(), soValue: new Map(), soValueOk: false, loading: false, day: '', ops: new Set(), wc: '', exportRows: [] };
+  const EXPORT_HEADERS = ['Row', 'Customer PO', 'Operation', 'Work Center', 'Job', 'Item', 'Item Description', 'Qty', 'Created', 'Due', 'Past Due'];
 
   const content = document.getElementById('content');
   const kpis = document.getElementById('kpis');
@@ -423,7 +431,8 @@ details[open] .chev { transform: rotate(90deg); }
     kpis.appendChild(kpi('Customer POs', groups.size));
     kpis.appendChild(kpi('Sales Orders', new Set(rows.map(r => r.salesOrderNumber)).size));
     kpis.appendChild(kpi('Jobs', new Set(rows.map(r => r.jobName)).size));
-    kpis.appendChild(kpi('Ready Operations', rows.length));
+    const lateSalesOrders = new Set(rows.filter(isPastDue).map(r => String(r.salesOrderNumber || '').trim()).filter(Boolean));
+    kpis.appendChild(kpi('Late Sales Orders', lateSalesOrders.size));
     const pastDueCount = rows.filter(isPastDue).length;
     const pdCard = kpi('Past Due Operations', pastDueCount);
     if (pastDueCount > 0) {
@@ -433,6 +442,7 @@ details[open] .chev { transform: rotate(90deg); }
     kpis.appendChild(pdCard);
 
     content.innerHTML = '';
+    state.exportRows = [];
     if (!rows.length) {
       const msg = state.rows.length
         ? 'No operations match these filters for ' + fmtDay(state.day) + '.'
@@ -452,6 +462,7 @@ details[open] .chev { transform: rotate(90deg); }
       return a.localeCompare(b, undefined, { numeric: true });
     });
 
+    let rowNumber = 0;
     keys.forEach(key => {
       const list = groups.get(key).slice().sort((a, b) => {
         const da = dueKey(a);
@@ -510,13 +521,14 @@ details[open] .chev { transform: rotate(90deg); }
       const table = el('table', 'w-full border-collapse');
       const thead = el('thead', 'bg-[var(--tui-background-neutral-1)] text-left');
       const hr = el('tr', 'f-text-ui-s text-[var(--tui-text-secondary)]');
-      ['Op #', 'Operation', 'Job', 'Item', 'Qty', 'Created', 'Due', 'Status'].forEach((h, i) => {
-        hr.appendChild(el('th', 'px-[var(--space-12)] py-[var(--space-8)] font-medium' + (i === 4 ? ' text-right' : ''), h));
+      ['#', 'Op #', 'Operation', 'Job', 'Item', 'Qty', 'Created', 'Due', 'Status'].forEach((h, i) => {
+        hr.appendChild(el('th', 'px-[var(--space-12)] py-[var(--space-8)] font-medium' + (h === 'Qty' ? ' text-right' : ''), h));
       });
       thead.appendChild(hr);
       table.appendChild(thead);
       const tbody = el('tbody', '');
       list.forEach(r => {
+        rowNumber += 1;
         const job = state.jobsByName.get(r.jobName);
         const tr = el('tr', 'border-t border-[var(--tui-border-normal)] align-top');
         const late = isPastDue(r);
@@ -532,6 +544,7 @@ details[open] .chev { transform: rotate(90deg); }
           tr.style.color = 'var(--danger)';
           tr.style.background = 'color-mix(in srgb, var(--danger) 10%, transparent)';
         }
+        tr.appendChild(el('td', 'px-[var(--space-12)] py-[var(--space-8)] text-[var(--tui-text-secondary)]', String(rowNumber)));
         tr.appendChild(el('td', 'px-[var(--space-12)] py-[var(--space-8)] text-[var(--tui-text-secondary)]', r.operationNumber != null ? String(r.operationNumber) : '—'));
         const opTd = el('td', 'px-[var(--space-12)] py-[var(--space-8)]');
         opTd.appendChild(el('div', '', r.operationName || '—'));
@@ -556,6 +569,7 @@ details[open] .chev { transform: rotate(90deg); }
         const st = el('td', 'px-[var(--space-12)] py-[var(--space-8)]');
         st.appendChild(badge(r.operationStatus));
         tr.appendChild(st);
+        state.exportRows.push([rowNumber, key, r.operationName || '', wcOf(r) !== NO_WC ? wcOf(r) : '', r.jobName || '', r.item || '', r.itemDescription && r.itemDescription !== r.item ? r.itemDescription : '', r.jobPlannedQty == null ? '' : Number(r.jobPlannedQty), job && job.createdUtc ? fmtCreated(job.createdUtc) : '', r.productionDueDate ? fmtDay(r.productionDueDate) : '', late ? 'Yes' : 'No']);
         tbody.appendChild(tr);
       });
       table.appendChild(tbody);
@@ -565,11 +579,42 @@ details[open] .chev { transform: rotate(90deg); }
     });
   }
 
+  function exportToExcel() {
+    const box = document.getElementById('exportMsg');
+    box.textContent = '';
+    box.hidden = true;
+    if (typeof XLSX === 'undefined') {
+      box.textContent = 'Excel export library did not load. Check your internet connection and reload.';
+      box.hidden = false;
+      return;
+    }
+    if (state.loading) {
+      box.textContent = 'Wait for the operations to finish loading, then export.';
+      box.hidden = false;
+      return;
+    }
+    if (!state.exportRows.length) {
+      box.textContent = 'There are no operations on screen to export.';
+      box.hidden = false;
+      return;
+    }
+    try {
+      const ws = XLSX.utils.aoa_to_sheet([EXPORT_HEADERS].concat(state.exportRows));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Due Today');
+      XLSX.writeFile(wb, 'due-by-operation-' + state.day + (state.wc ? '-' + state.wc : '') + '.xlsx');
+    } catch (err) {
+      box.textContent = (err && err.message) || 'Could not save the Excel file.';
+      box.hidden = false;
+    }
+  }
+
   function start() {
     dueInput.value = shopToday();
     dueInput.addEventListener('change', load);
     document.getElementById('todayBtn').addEventListener('click', () => { dueInput.value = shopToday(); load(); });
     document.getElementById('refreshBtn').addEventListener('click', load);
+    document.getElementById('exportBtn').addEventListener('click', exportToExcel);
     document.getElementById('printBtn').addEventListener('click', () => window.print());
     load();
   }
@@ -580,3 +625,4 @@ details[open] .chev { transform: rotate(90deg); }
 </script>
 </body>
 </html>
+
